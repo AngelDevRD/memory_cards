@@ -29,10 +29,21 @@ class LevelDefinitions {
   );
 
   static const List<BoardSize> _boardOrder = [
-    BoardSize.size2x2,
     BoardSize.size4x4,
     BoardSize.size6x6,
     BoardSize.size8x8,
+    BoardSize.size10x10,
+    BoardSize.size12x12,
+    BoardSize.size14x14,
+    BoardSize.size16x16,
+    BoardSize.size20x20,
+    BoardSize.size24x24,
+    BoardSize.size28x28,
+    BoardSize.size32x32,
+    BoardSize.size40x40,
+    BoardSize.size48x48,
+    BoardSize.size56x56,
+    BoardSize.size64x64,
   ];
 
   static Level byNumber(int number) =>

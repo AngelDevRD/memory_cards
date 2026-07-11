@@ -112,7 +112,11 @@ class _MemoryCardWidgetState extends State<MemoryCardWidget>
             : null,
       ),
       alignment: Alignment.center,
-      child: Text(widget.card.symbol, style: const TextStyle(fontSize: 28)),
+      padding: const EdgeInsets.all(2),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(widget.card.symbol, style: const TextStyle(fontSize: 28)),
+      ),
     );
   }
 }

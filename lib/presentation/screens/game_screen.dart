@@ -1,23 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/level.dart';
 import '../../providers/game_provider.dart';
 import '../widgets/board_grid_widget.dart';
 
 /// Active gameplay screen: board grid, move/timer HUD, end-of-game summary.
-class GameScreen extends ConsumerWidget {
+///
+/// Holds the active [GameConfig] as local state (instead of a fixed widget
+/// field) so that finishing a level can swap straight to the next one's
+/// config in place — Riverpod's family provider then builds a fresh board
+/// for the new config automatically, no navigation involved.
+class GameScreen extends ConsumerStatefulWidget {
   const GameScreen({super.key, required this.config});
 
   final GameConfig config;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(gameProvider(config));
-    final notifier = ref.read(gameProvider(config).notifier);
+  ConsumerState<GameScreen> createState() => _GameScreenState();
+}
+
+class _GameScreenState extends ConsumerState<GameScreen> {
+  late GameConfig _config;
+
+  @override
+  void initState() {
+    super.initState();
+    _config = widget.config;
+  }
+
+  Level? get _nextLevel {
+    final currentNumber = _config.levelNumber;
+    if (currentNumber == null) return null;
+    final nextNumber = currentNumber + 1;
+    if (nextNumber > LevelDefinitions.all.length) return null;
+    return LevelDefinitions.byNumber(nextNumber);
+  }
+
+  void _retry() {
+    ref.invalidate(gameProvider(_config));
+  }
+
+  void _goToNextLevel() {
+    final next = _nextLevel;
+    if (next == null) return;
+    setState(() {
+      _config = GameConfig(
+        boardSize: next.boardSize,
+        category: next.category,
+        levelNumber: next.number,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(gameProvider(_config));
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${config.boardSize.label} · ${config.category.label}'),
+        title: Text('${_config.boardSize.label} · ${_config.category.label}'),
       ),
       body: Column(
         children: [
@@ -37,14 +79,16 @@ class GameScreen extends ConsumerWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child: BoardGridWidget(
-                boardSize: config.boardSize,
-                cards: state.cards,
-                onCardTap: notifier.flipCard,
-              ),
+              child: BoardGridWidget(key: ValueKey(_config), config: _config),
             ),
           ),
-          if (state.isComplete) _CompletionBanner(state: state),
+          if (state.isComplete)
+            _CompletionBanner(
+              state: state,
+              hasNextLevel: _nextLevel != null,
+              onRetry: _retry,
+              onNextLevel: _goToNextLevel,
+            ),
         ],
       ),
     );
@@ -70,9 +114,17 @@ class _HudChip extends StatelessWidget {
 }
 
 class _CompletionBanner extends StatelessWidget {
-  const _CompletionBanner({required this.state});
+  const _CompletionBanner({
+    required this.state,
+    required this.hasNextLevel,
+    required this.onRetry,
+    required this.onNextLevel,
+  });
 
   final GameUiState state;
+  final bool hasNextLevel;
+  final VoidCallback onRetry;
+  final VoidCallback onNextLevel;
 
   @override
   Widget build(BuildContext context) {
@@ -99,9 +151,25 @@ class _CompletionBanner extends StatelessWidget {
           const SizedBox(height: 8),
           Text('Puntuación: ${state.score}'),
           const SizedBox(height: 12),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Volver'),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              OutlinedButton(
+                onPressed: onRetry,
+                child: const Text('Reintentar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Volver'),
+              ),
+              if (hasNextLevel)
+                FilledButton(
+                  onPressed: onNextLevel,
+                  child: const Text('Siguiente nivel'),
+                ),
+            ],
           ),
         ],
       ),
