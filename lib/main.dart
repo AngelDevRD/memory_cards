@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/app_updater.dart';
 import 'presentation/app_theme.dart';
 import 'presentation/screens/achievements_screen.dart';
 import 'presentation/screens/game_screen.dart';
@@ -57,6 +58,7 @@ class MemoryCardsApp extends ConsumerStatefulWidget {
 
 class _MemoryCardsAppState extends ConsumerState<MemoryCardsApp> {
   bool _showSplash = true;
+  bool _updateCheckStarted = false;
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +74,17 @@ class _MemoryCardsAppState extends ConsumerState<MemoryCardsApp> {
       home: _showSplash
           ? SplashScreen(onFinished: () => setState(() => _showSplash = false))
           : _AppWithTutorial(router: _router),
+      builder: (context, child) {
+        if (!_updateCheckStarted) {
+          _updateCheckStarted = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) {
+              AppUpdater.checkForUpdate(context, slug: 'memory-cards');
+            }
+          });
+        }
+        return child!;
+      },
     );
   }
 }
